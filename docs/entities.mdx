@@ -18,6 +18,8 @@ nextTitle: Device Triggers
 | Cooling       |                   |
 | Secondary aux | P2S, X2D          |
 
+<Info>On the X2D these are named to match the printer screen: Part fan, Left aux fan, Right aux fan (secondary aux) and Exhaust fan (chamber).</Info>
+
 ## Temperatures
 
 | Sensor           | Notes   |
@@ -26,8 +28,8 @@ nextTitle: Device Triggers
 | Target Bed       |         |
 | Chamber          | P2/X1/H2 only |
 | Target Chamber   | X1E/H2 only |
-| Nozzle(s)        | Three on H2D (left, right, and active nozzle) |
-| Target Nozzle(s) | Three on H2D (left, right, and active nozzle) |
+| Nozzle(s)        | Three on dual-nozzle printers (left, right, and active nozzle) |
+| Target Nozzle(s) | Three on dual-nozzle printers (left, right, and active nozzle) |
 
 ## Print Data and Progress
 
@@ -42,8 +44,9 @@ nextTitle: Device Triggers
 | Start Time        | Simulated - more accurate with Bambu credentials   |
 | Remaining Time    |                                                    |
 | End Time          |                                                    |
-| Current Stage     |                                                    |
+| Current Stage     | `planned_stages`, `step`, `total_steps` attributes: the start-up stages the printer plans to run and the 1-based position of the current one |
 | Print Status      |                                                    |
+| Task Name         | `ams_mapping` attribute: AMS unit id and tray per slicer filament |
 | Cover Image       | With Bambu credentials or when loaded from printer |
 | Total Usage Hours | \* See Note                                        |
 
@@ -55,11 +58,13 @@ nextTitle: Device Triggers
 
 | Sensor                   | Notes |
 | ------------------------ | ----- |
-| Nozzle Diameter(s)       | Three on H2D (left, right, and active nozzle) |
-| Nozzle Type(s)           | Three on H2D (left, right, and active nozzle) |
+| Nozzle Diameter(s)       | Three on dual-nozzle printers (left, right, and active nozzle) |
+| Nozzle Type(s)           | Three on dual-nozzle printers (left, right, and active nozzle) |
+| Active Nozzle            | Left or right. Dual nozzle printers only |
 | Speed Profile            |       |
 | Timelapse Active         |       |
-| Extruder Filament Status |       |
+| Extruder Filament Status | Also left and right on dual-nozzle printers |
+| Track Switch Input 1/2   | Filament Track Switch only. Nozzle each input feeds, with the loaded filament as attributes |
 | Airduct Mode             | Current airduct mode: Cooling, Heating, or Laser. P2S/H2 only |
 | Tool Module State        | Current mounted tool (H2D exclusive): none, laser, cutter or unavailable |
 
@@ -91,11 +96,13 @@ nextTitle: Device Triggers
 | Active tray       | If AMS present |
 | Active tray index | If AMS present |
 | Drying            | AMS 2 Pro/AMS HT only |
+| Connected nozzle  | Dual-nozzle printers only: Left or Right. Through a Filament Track Switch, the nozzle its loaded filament is routed to, otherwise Track switch |
 
 
 | Sensor                | Notes                 |
 | --------------------- | --------------------- |
 | Humidity Index        |                       |
+| Status                | Filament change step  |
 | Humidity              | P1/P2/X1/H2 only      |
 | Temperature           | P1/P2/X1/H2 only      |
 | Remaining drying time | AMS 2 Pro/AMS HT only |
@@ -137,8 +144,9 @@ nextTitle: Device Triggers
 
 | Attributes:     | Notes      |
 | --------------- | ---------- |
+| Active          | `true` while this slot is feeding the printer |
 | Color           |            |
-| Empty           |            |
+| Empty           | `true` when no filament is set on the holder. A loaded spool that isn't feeding stays `false`; see Active. |
 | Unknown         |            |
 | State           |            |
 | K Value         | P1/A1 only |
@@ -200,3 +208,51 @@ When a slot is empty, all attributes are set to `None`.
 | ------- | --------------------------------------------------------------- |
 | Chamber | P1/A1/A1Mini - need the host IP providing                       |
 |         | X1    - Make sure to enable "LAN Mode LiveView" on your printer |
+
+## MakerWorld
+
+A MakerWorld profile belongs to the same Bambu Lab account the cloud connection
+already signs into, so these are created automatically when the integration is
+set up with Bambu credentials and the account has a MakerWorld profile. They
+live on their own `MakerWorld (<name>)` device rather than on a printer, and are
+polled every 15 minutes.
+
+| Sensor           | Notes                                                                 |
+| ---------------- | --------------------------------------------------------------------- |
+| Points           | Your points balance, as shown on the MakerWorld points page            |
+| Points earned    | Lifetime points earned - use this one for daily/monthly statistics     |
+| Boosts received  | Boosts your models have been given, all time                            |
+| Boost tokens     | Boost tokens currently available to give out                           |
+| Downloads        | Downloads of your models, the figure your profile page shows           |
+| Prints           | Prints of your models, the figure your profile page shows              |
+| Published models | Number of models you have published                                    |
+| Likes            |                                                                       |
+| Collects         |                                                                       |
+| Followers        |                                                                       |
+| Level            | Attributes contain the profile name and URL                            |
+
+The following are disabled by default - enable them in Home Assistant if you
+want them: Points spent, Exclusive points, Boosts used, Boosts expired, Print
+profile downloads, Print profile prints, Downloads incl. print profiles, Prints
+incl. print profiles, Following.
+
+<Info>
+MakerWorld counts a print profile - which may sit on someone else's model -
+separately from the model itself, and your profile page shows only the model
+half. The default Downloads and Prints sensors match the page; the "incl. print
+profiles" sensors add the other half, a figure MakerWorld does not display
+anywhere.
+</Info>
+
+<Info>
+With several printers on one Bambu Lab account these sensors are created once,
+by whichever printer's config entry was added first - the numbers describe the
+account, not a printer.
+</Info>
+
+<Info>
+These come from the account's own MakerWorld profile, which needs the cloud
+token. If that call is rejected the integration falls back to the public
+creator profile, which carries the same counts but no points and no boosts -
+those sensors then report unavailable while the rest keep working.
+</Info>
